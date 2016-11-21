@@ -1,10 +1,15 @@
 package jp.realglobe.sugo.actor;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import io.socket.client.Ack;
@@ -13,9 +18,9 @@ import io.socket.client.Socket;
 import jp.realglobe.sg.socket.Constants;
 
 /**
- * 簡易 Actor
+ * Actor
  */
-final class Actor {
+public class Actor {
 
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
 
@@ -25,58 +30,72 @@ final class Actor {
     private static final String KEY_KEY = "key";
     private static final String KEY_NAME = "name";
     private static final String KEY_SPEC = "spec";
-    private static final String KEY_VERSION = "version";
-    private static final String KEY_DESC = "desc";
-    private static final String KEY_METHODS = "methods";
     private static final String KEY_MODULE = "module";
     private static final String KEY_EVENT = "event";
     private static final String KEY_DATA = "data";
+    private static final String KEY_PARAMS = "params";
+    private static final String KEY_METHOD = "method";
+    private static final String KEY_STATUS = "status";
+    private static final String KEY_PAYLOAD = "payload";
 
-    private final String server;
+    private final String hub;
     private final String key;
-    private final String name;
-    private final String version;
-    private final String description;
-    private final String module;
-
     private Runnable onConnection;
+
+    private final Map<String, Module> modules;
+
+    private final CountDownLatch connected;
 
     private Socket socket;
 
     private boolean greeted;
 
-    Actor(final String server, final String key, final String name, final String version, final String description, final String module) {
-        this.server = server;
+    /**
+     * 作成する
+     * @param hub サーバー URL
+     * @param key キー
+     * @param name 名前
+     * @param description 説明
+     */
+    public Actor(final String hub, final String key, final String name, final String description) {
+        this.hub = hub;
         this.key = key;
-        this.name = name;
-        this.version = version;
-        this.description = description;
-        this.module = module;
-    }
-
-    synchronized boolean isConnecting() {
-        return this.socket != null;
+        this.modules = new HashMap<>();
+        this.connected = new CountDownLatch(1);
     }
 
     /**
-     * つなぐ
+     * つながるまで待つ
+     * @throws InterruptedException 割り込まれた
      */
-    synchronized void connect() {
+    public void waitConnect() throws InterruptedException {
+        connect();
+        this.connected.await();
+    }
+
+    /**
+     * サーバーにつなぐ
+     */
+    public synchronized void connect() {
         if (this.socket != null) {
             LOG.info("Already connected");
             return;
         }
-        this.socket = (new Manager(URI.create(this.server))).socket(NAMESPACE);
+        this.socket = (new Manager(URI.create(this.hub))).socket(NAMESPACE);
 
         this.socket.on(Socket.EVENT_CONNECT, args -> {
-            LOG.fine("Connected to " + this.server);
-            processAfterConnection();
+            LOG.fine("Connected to " + this.hub);
+            greet();
         });
-        this.socket.on(Socket.EVENT_DISCONNECT, args -> LOG.fine("Disconnected from " + this.server));
+        this.socket.on(Socket.EVENT_DISCONNECT, args -> LOG.fine("Disconnected from " + this.hub));
+        this.socket.on(Constants.RemoteEvents.PERFORM, this::perform);
         this.socket.connect();
     }
 
-    private synchronized void processAfterConnection() {
+    /**
+     * サーバーに最初の挨拶
+     */
+    private synchronized void greet() {
         if (this.socket == null) {
             // 終了
             return;
@@ -91,30 +110,87 @@ final class Actor {
     }
 
     private synchronized void processAfterGreeting() {
+        this.greeted = true;
+
+        final List<Map.Entry<String, Module>> entries = new ArrayList<>(this.modules.entrySet());
+        sendSpecification(entries);
+    }
+
+    /**
+     * サーバーに仕様を通知
+     * @param entries 通知するモジュール
+     */
+    private synchronized void sendSpecification(final List<Map.Entry<String, Module>> entries) {
         if (this.socket == null) {
             // 終了
             return;
         }
-        this.greeted = true;
 
-        final Map<String, Object> specData = new HashMap<>();
-        specData.put(KEY_NAME, this.name);
-        specData.put(KEY_VERSION, this.version);
-        if (this.description != null) {
-            specData.put(KEY_DESC, this.description);
-        }
-        specData.put(KEY_METHODS, new HashMap<String, Object>());
-
-        final Map<String, Object> data = new HashMap<>();
-        data.put(KEY_NAME, this.module);
-        data.put(KEY_SPEC, specData);
-
-        this.socket.emit(Constants.RemoteEvents.SPEC, new JSONObject(data), (Ack) args -> {
-            LOG.fine(this.socket.id() + " sent specification");
+        if (entries.isEmpty()) {
+            this.connected.countDown();
             if (this.onConnection != null) {
                 this.onConnection.run();
             }
+            return;
+        }
+
+        final Map.Entry<String, Module> entry = entries.remove(entries.size() - 1);
+
+        final String moduleName = entry.getKey();
+        final Object specification = Specification.generateSpecification(entry.getValue());
+
+        final Map<String, Object> data = new HashMap<>();
+        data.put(KEY_NAME, moduleName);
+        data.put(KEY_SPEC, specification);
+
+        this.socket.emit(Constants.RemoteEvents.SPEC, new JSONObject(data), (Ack) args -> {
+            LOG.fine(this.socket.id() + " sent specification " + moduleName);
+            sendSpecification(entries);
         });
+    }
+
+    /**
+     * モジュール関数を実行
+     * @param args io.socket.client.Ack.call を参照
+     */
+    private void perform(final Object[] args) {
+        try {
+            final JSONObject data = (JSONObject) args[0];
+            if (!this.key.equals(data.getString(KEY_KEY))) {
+                return;
+            }
+            final Module module;
+            synchronized (this) {
+                final String moduleName = data.getString(KEY_MODULE);
+                if (!this.modules.containsKey(moduleName)) {
+                    return;
+                }
+                module = this.modules.get(moduleName);
+            }
+            final String methodName = data.getString(KEY_METHOD);
+            final Class<?> returnType = module.getReturnType(methodName);
+            if (returnType == null) {
+                throw new RuntimeException("function " + methodName + " does not exist");
+            }
+            final Object[] parameters = JsonUtils.convertToObject(data.getJSONArray(KEY_PARAMS));
+            final Object returnValue = module.invoke(methodName, parameters);
+
+            final Ack ack = (Ack) args[args.length - 1];
+            final Map<String, Object> responseData = new HashMap<>();
+            responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.OK);
+            if (returnType != Void.TYPE) {
+                responseData.put(KEY_PAYLOAD, returnValue);
+            }
+            ack.call(new JSONObject(responseData));
+        } catch (final JSONException e) {
+            throw new RuntimeException(e);
+        } catch (final IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (final IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (final InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -126,14 +202,44 @@ final class Actor {
     }
 
     /**
-     * 送る
-     * @param event イベント
-     * @param data データ
+     * モジュールを登録する
+     * @param moduleName モジュール名
+     * @param moduleVersion モジュールバージョン
+     * @param moduleDescription モジュールの説明
+     * @param module モジュール
+     * @return モジュール用のイベント送信機
      */
-    synchronized void emit(final String event, final Map<String, Object> data) {
+    public synchronized Emitter addModule(final String moduleName, final String moduleVersion, final String moduleDescription, final Object module) {
+        this.modules.put(moduleName, new Module(moduleVersion, moduleDescription, module));
+        final Emitter emitter;
+        if (module instanceof Emitter) {
+            emitter = (Emitter) module;
+        } else {
+            emitter = new EmitterImpl(moduleName);
+        }
+        emitter.setEmitter(this::emit);
+        return emitter;
+    }
+
+    static interface ActorEmitter {
+        void emit(String moduleName, String event, Object data);
+    }
+
+    private class EmitterImpl extends Emitter {
+        EmitterImpl(final String name) {
+            super(name);
+        }
+    }
+
+    /**
+     * イベント送信
+     * @param event イベント
+     * @param data JSON 化可能なデータ
+     */
+    synchronized void emit(final String moduleName, final String event, final Object data) {
         final Map<String, Object> wrapData = new HashMap<>();
         wrapData.put(KEY_KEY, this.key);
-        wrapData.put(KEY_MODULE, this.module);
+        wrapData.put(KEY_MODULE, moduleName);
         wrapData.put(KEY_EVENT, event);
         if (data != null) {
             wrapData.put(KEY_DATA, data);
@@ -144,7 +250,7 @@ final class Actor {
     /**
      * 切断する
      */
-    synchronized void disconnect() {
+    public synchronized void disconnect() {
         if (this.socket == null) {
             LOG.info("Not connecting");
             return;
@@ -161,6 +267,43 @@ final class Actor {
         final Map<String, Object> data = new HashMap<>();
         data.put(KEY_KEY, this.key);
         socket0.emit(Constants.GreetingEvents.BYE, new JSONObject(data), (Ack) args -> socket0.disconnect());
+    }
+
+    /**
+     * テスト実行
+     * @param args 実行引数
+     * @throws InterruptedException 終わり
+     */
+    public static void main(final String[] args) throws InterruptedException {
+        final String hub = "http://localhost:8080/";
+        final String key = "actor0";
+        final String name = "actor";
+        final String description = "test actor";
+        final Actor actor = new Actor(hub, key, name, description);
+
+        final String moduleName = "module";
+        final String moduleVersion = "2.0.0";
+        final String moduleDescription = "test module";
+        final Object module = new Emitter(moduleName) {
+            @ModuleMethod
+            public String exec(final String arg) {
+                return "arg is " + arg;
+            }
+        };
+
+        final Emitter emitter = actor.addModule(moduleName, moduleVersion, moduleDescription, module);
+        actor.setOnConnection(() -> {
+            System.out.println("Connected to hub " + hub);
+        });
+
+        actor.waitConnect();
+
+        final String event = "event";
+        final String eventData = "eventData";
+        while (true) {
+            emitter.emit(event, eventData);
+            Thread.sleep(1_000L);
+        }
     }
 
 }
