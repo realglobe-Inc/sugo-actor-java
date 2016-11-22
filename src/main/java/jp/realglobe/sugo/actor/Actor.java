@@ -269,41 +269,4 @@ public class Actor {
         socket0.emit(Constants.GreetingEvents.BYE, new JSONObject(data), (Ack) args -> socket0.disconnect());
     }
 
-    /**
-     * テスト実行
-     * @param args 実行引数
-     * @throws InterruptedException 終わり
-     */
-    public static void main(final String[] args) throws InterruptedException {
-        final String hub = "http://localhost:8080/";
-        final String key = "actor0";
-        final String name = "actor";
-        final String description = "test actor";
-        final Actor actor = new Actor(hub, key, name, description);
-
-        final String moduleName = "module";
-        final String moduleVersion = "2.0.0";
-        final String moduleDescription = "test module";
-        final Object module = new Emitter(moduleName) {
-            @ModuleMethod
-            public String exec(final String arg) {
-                return "arg is " + arg;
-            }
-        };
-
-        final Emitter emitter = actor.addModule(moduleName, moduleVersion, moduleDescription, module);
-        actor.setOnConnection(() -> {
-            System.out.println("Connected to hub " + hub);
-        });
-
-        actor.waitConnect();
-
-        final String event = "event";
-        final String eventData = "eventData";
-        while (true) {
-            emitter.emit(event, eventData);
-            Thread.sleep(1_000L);
-        }
-    }
-
 }
