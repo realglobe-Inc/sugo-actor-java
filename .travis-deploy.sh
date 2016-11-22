@@ -6,10 +6,10 @@ deploy() {
          ${DOCUMENT_SERVER}/${TRAVIS_REPO_SLUG}/${TRAVIS_BUILD_NUMBER}/${1}
 }
 
-mvn deploy -DskipTests=true -Dmaven.javadoc.skip=true -B --settings .travis-deploy-settings.xml
+mvn deploy -DskipTests=true -Dmaven.javadoc.skip=true -B
 
-mvn javadoc:javadoc -B --settings .travis-settings.xml
+mvn javadoc:javadoc -B
 deploy apidocs
 
-mvn jacoco:report -B --settings .travis-settings.xml
+mvn jacoco:report -B
 deploy jacoco
