@@ -1,21 +1,15 @@
 #!/bin/sh -e
 
-npm=${NPM:="npm"}
 nodejs=${NODEJS:="node"}
 port=${PORT:=12345}
 
 (
   cd $(dirname $0)/..
 
-  if ! which ${npm} > /dev/null; then
-    echo "no npm:" ${npm}
-    exit 1
-  elif ! which ${nodejs} > /dev/null; then
+  if ! which ${nodejs} > /dev/null; then
     echo "no node.js:" ${nodejs}
     exit 1
   fi
-
-  ${npm} install
 
   export PORT=${port}
   rm -rf var
