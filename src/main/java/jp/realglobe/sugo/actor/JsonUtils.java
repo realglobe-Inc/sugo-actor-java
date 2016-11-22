@@ -24,7 +24,9 @@ final class JsonUtils {
         try {
             for (final String key : jsonObject.keySet()) {
                 final Object obj = jsonObject.get(key);
-                if (obj instanceof JSONObject) {
+                if (obj == JSONObject.NULL) {
+                    map.put(key, null);
+                } else if (obj instanceof JSONObject) {
                     map.put(key, convertToObject((JSONObject) obj));
                 } else if (obj instanceof JSONArray) {
                     map.put(key, convertToObject((JSONArray) obj));
@@ -49,7 +51,9 @@ final class JsonUtils {
         try {
             for (int i = 0; i < array.length; i++) {
                 final Object obj = jsonArray.get(i);
-                if (obj instanceof JSONObject) {
+                if (obj == JSONObject.NULL) {
+                    array[i] = null;
+                } else if (obj instanceof JSONObject) {
                     array[i] = convertToObject((JSONObject) obj);
                 } else if (obj instanceof JSONArray) {
                     array[i] = convertToObject((JSONArray) obj);
