@@ -1,0 +1,28 @@
+language: java
+jdk:
+  - oraclejdk8
+env:
+  - TRAVIS_NODE_VERSION=6
+cache:
+  directories:
+    - .autoconf
+    - $HOME/.m2
+    - node_modules
+before_install:
+  - mkdir -p $HOME/.m2
+  - cp .travis-settings.xml $HOME/.m2/settings.xml
+  - nvm install ${TRAVIS_NODE_VERSION}
+  - echo "registry = ${CI_REPOSITORY}/api/npm/npm-virtual" > $HOME/.npmrc
+  - curl -u"${CI_READ_USERNAME}:${CI_READ_PASSWORD}" "${CI_REPOSITORY}/api/npm/auth" >> $HOME/.npmrc
+install:
+  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+  - npm install
+script:
+  - mvn test -B
+  - ./ci/test.sh
+deploy:
+  provider: script
+  script: ./.travis-deploy.sh
+  skip_cleanup: true
+  on:
+    branch: master
