@@ -40,7 +40,7 @@ public class Actor {
 
     private final String hub;
     private final String key;
-    private Runnable onConnection;
+    private Runnable onConnect;
 
     private final Map<String, Module> modules;
 
@@ -128,8 +128,8 @@ public class Actor {
 
         if (entries.isEmpty()) {
             this.connected.countDown();
-            if (this.onConnection != null) {
-                this.onConnection.run();
+            if (this.onConnect != null) {
+                this.onConnect.run();
             }
             return;
         }
@@ -195,10 +195,10 @@ public class Actor {
 
     /**
      * つながったときに実行する関数を登録する
-     * @param onConnection つながったときに実行する関数
+     * @param onConnect つながったときに実行する関数
      */
-    synchronized void setOnConnection(final Runnable onConnection) {
-        this.onConnection = onConnection;
+    synchronized void setOnConnect(final Runnable onConnect) {
+        this.onConnect = onConnect;
     }
 
     /**
