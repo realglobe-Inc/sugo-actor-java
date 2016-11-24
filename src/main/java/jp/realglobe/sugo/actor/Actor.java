@@ -1,6 +1,5 @@
 package jp.realglobe.sugo.actor;
 
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import io.socket.client.Ack;
 import io.socket.client.Manager;
 import io.socket.client.Socket;
+import jp.realglobe.lib.util.StackTraces;
 import jp.realglobe.sg.socket.Constants;
 
 /**
@@ -139,43 +138,44 @@ public class Actor {
      * @param args io.socket.client.Ack.call を参照
      */
     private void perform(final Object[] args) {
-        try {
-            final JSONObject data = (JSONObject) args[0];
-            if (!this.key.equals(data.getString(KEY_KEY))) {
+        final JSONObject data = (JSONObject) args[0];
+        if (!this.key.equals(data.getString(KEY_KEY))) {
+            return;
+        }
+        final Module module;
+        synchronized (this) {
+            final String moduleName = data.getString(KEY_MODULE);
+            if (!this.modules.containsKey(moduleName)) {
                 return;
             }
-            final Module module;
-            synchronized (this) {
-                final String moduleName = data.getString(KEY_MODULE);
-                if (!this.modules.containsKey(moduleName)) {
-                    return;
-                }
-                module = this.modules.get(moduleName);
-            }
-            final String methodName = data.getString(KEY_METHOD);
-            final Class<?> returnType = module.getReturnType(methodName);
-            if (returnType == null) {
-                throw new RuntimeException("function " + methodName + " does not exist");
-            }
-            final Object[] parameters = JsonUtils.convertToObject(data.getJSONArray(KEY_PARAMS));
-            final Object returnValue = module.invoke(methodName, parameters);
+            module = this.modules.get(moduleName);
+        }
+        final String methodName = data.getString(KEY_METHOD);
+        final Class<?> returnType = module.getReturnType(methodName);
+        if (returnType == null) {
+            throw new RuntimeException("function " + methodName + " does not exist");
+        }
+        final Object[] parameters = JsonUtils.convertToObject(data.getJSONArray(KEY_PARAMS));
 
-            final Ack ack = (Ack) args[args.length - 1];
+        final Ack ack = (Ack) args[args.length - 1];
+        JSONObject response;
+        try {
             final Map<String, Object> responseData = new HashMap<>();
+            final Object returnValue = module.invoke(methodName, parameters);
             responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.OK);
             if (returnType != Void.TYPE) {
                 responseData.put(KEY_PAYLOAD, returnValue);
             }
-            ack.call(new JSONObject(responseData));
-        } catch (final JSONException e) {
-            throw new RuntimeException(e);
-        } catch (final IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (final IllegalArgumentException e) {
-            throw new RuntimeException(e);
-        } catch (final InvocationTargetException e) {
-            throw new RuntimeException(e);
+            response = new JSONObject(responseData);
+        } catch (final Exception e) {
+            final String warning = StackTraces.getString(e);
+            LOG.warning(warning);
+            final Map<String, Object> responseData = new HashMap<>();
+            responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.NG);
+            responseData.put(KEY_PAYLOAD, warning);
+            response = new JSONObject(responseData);
         }
+        ack.call(response);
     }
 
     /**
