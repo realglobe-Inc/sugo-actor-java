@@ -69,7 +69,7 @@ public class ActorTest {
         final Object module = new TestClass();
 
         actor.addModule(moduleName, moduleVersion, moduleDescription, module);
-        actor.waitConnect();
+        actor.connect();
 
         Thread.sleep(Long.MAX_VALUE);
     }

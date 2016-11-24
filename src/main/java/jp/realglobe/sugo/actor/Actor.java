@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
 
 import org.json.JSONException;
@@ -40,14 +39,11 @@ public class Actor {
 
     private final String hub;
     private final String key;
-    private Runnable onConnection;
 
+    private Runnable onConnect;
     private final Map<String, Module> modules;
 
-    private final CountDownLatch connected;
-
     private Socket socket;
-
     private boolean greeted;
 
     /**
@@ -61,16 +57,6 @@ public class Actor {
         this.hub = hub;
         this.key = key;
         this.modules = new HashMap<>();
-        this.connected = new CountDownLatch(1);
-    }
-
-    /**
-     * つながるまで待つ
-     * @throws InterruptedException 割り込まれた
-     */
-    public void waitConnect() throws InterruptedException {
-        connect();
-        this.connected.await();
     }
 
     /**
@@ -127,9 +113,8 @@ public class Actor {
         }
 
         if (entries.isEmpty()) {
-            this.connected.countDown();
-            if (this.onConnection != null) {
-                this.onConnection.run();
+            if (this.onConnect != null) {
+                this.onConnect.run();
             }
             return;
         }
@@ -195,10 +180,10 @@ public class Actor {
 
     /**
      * つながったときに実行する関数を登録する
-     * @param onConnection つながったときに実行する関数
+     * @param onConnect つながったときに実行する関数
      */
-    synchronized void setOnConnection(final Runnable onConnection) {
-        this.onConnection = onConnection;
+    public synchronized void setOnConnect(final Runnable onConnect) {
+        this.onConnect = onConnect;
     }
 
     /**
@@ -267,43 +252,6 @@ public class Actor {
         final Map<String, Object> data = new HashMap<>();
         data.put(KEY_KEY, this.key);
         socket0.emit(Constants.GreetingEvents.BYE, new JSONObject(data), (Ack) args -> socket0.disconnect());
-    }
-
-    /**
-     * テスト実行
-     * @param args 実行引数
-     * @throws InterruptedException 終わり
-     */
-    public static void main(final String[] args) throws InterruptedException {
-        final String hub = "http://localhost:8080/";
-        final String key = "actor0";
-        final String name = "actor";
-        final String description = "test actor";
-        final Actor actor = new Actor(hub, key, name, description);
-
-        final String moduleName = "module";
-        final String moduleVersion = "2.0.0";
-        final String moduleDescription = "test module";
-        final Object module = new Emitter(moduleName) {
-            @ModuleMethod
-            public String exec(final String arg) {
-                return "arg is " + arg;
-            }
-        };
-
-        final Emitter emitter = actor.addModule(moduleName, moduleVersion, moduleDescription, module);
-        actor.setOnConnection(() -> {
-            System.out.println("Connected to hub " + hub);
-        });
-
-        actor.waitConnect();
-
-        final String event = "event";
-        final String eventData = "eventData";
-        while (true) {
-            emitter.emit(event, eventData);
-            Thread.sleep(1_000L);
-        }
     }
 
 }
