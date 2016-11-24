@@ -197,7 +197,7 @@ public class Actor {
      * つながったときに実行する関数を登録する
      * @param onConnect つながったときに実行する関数
      */
-    synchronized void setOnConnect(final Runnable onConnect) {
+    public synchronized void setOnConnect(final Runnable onConnect) {
         this.onConnect = onConnect;
     }
 
