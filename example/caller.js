@@ -11,13 +11,8 @@ co(function * () {
   const actor = yield caller.connect(ACTOR)
   const module = actor.get('module')
 
-  let count = 0
-  module.on('event', data => {
-    count++
-    if (count >= 10) {
-      caller.disconnect()
-    }
-  })
-  const result = yield module.exec('aho')
+  const result = yield module.method('arg0')
   console.log('Got result: ' + result)
+
+  caller.disconnect()
 }).catch((err) => console.error(err))
