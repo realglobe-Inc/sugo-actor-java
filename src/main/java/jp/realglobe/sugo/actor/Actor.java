@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
 
 import org.json.JSONException;
@@ -40,14 +39,11 @@ public class Actor {
 
     private final String hub;
     private final String key;
-    private Runnable onConnect;
 
+    private Runnable onConnect;
     private final Map<String, Module> modules;
 
-    private final CountDownLatch connected;
-
     private Socket socket;
-
     private boolean greeted;
 
     /**
@@ -61,16 +57,6 @@ public class Actor {
         this.hub = hub;
         this.key = key;
         this.modules = new HashMap<>();
-        this.connected = new CountDownLatch(1);
-    }
-
-    /**
-     * つながるまで待つ
-     * @throws InterruptedException 割り込まれた
-     */
-    public void waitConnect() throws InterruptedException {
-        connect();
-        this.connected.await();
     }
 
     /**
@@ -127,7 +113,6 @@ public class Actor {
         }
 
         if (entries.isEmpty()) {
-            this.connected.countDown();
             if (this.onConnect != null) {
                 this.onConnect.run();
             }
