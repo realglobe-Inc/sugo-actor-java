@@ -15,11 +15,11 @@ port=${PORT:=12345}
   rm -rf var
   ${nodejs} test/hub.js &
   pid_hub=$!
-  trap "kill ${pid_hub}" EXIT
+  trap "kill ${pid_hub}" EXIT 2
 
   mvn exec:java -Dexec.classpathScope=test -Dexec.mainClass=jp.realglobe.sugo.actor.ActorTest &
   pid_actor=$!
-  trap "kill ${pid_hub} ${pid_actor}" EXIT
+  trap "kill ${pid_hub} ${pid_actor}" EXIT 2
 
   ${nodejs} test/wait-actor.js
 
