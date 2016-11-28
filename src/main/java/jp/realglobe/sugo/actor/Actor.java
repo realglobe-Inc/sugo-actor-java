@@ -85,6 +85,11 @@ public class Actor {
         });
         this.socket.on(Socket.EVENT_DISCONNECT, args -> LOG.fine("Disconnected from " + this.hub));
         this.socket.on(Constants.RemoteEvents.PERFORM, this::perform);
+        this.socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
+            LOG.warning("Connection error: " + args[0]);
+            LOG.info(StackTraces.getString((Throwable) args[0]));
+        });
+
         this.socket.connect();
     }
 
