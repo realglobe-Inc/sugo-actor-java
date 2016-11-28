@@ -1,7 +1,8 @@
 package jp.realglobe.sugo.actor;
 
+import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,7 +70,10 @@ public class ModuleTest {
      */
     @Test
     public void testGetMethod() {
-        final Set<String> methodNames = this.module.getMethods().stream().map(method -> method.getName()).collect(Collectors.toSet());
+        final Set<String> methodNames = new HashSet<>();
+        for (final Method method : this.module.getMethods()) {
+            methodNames.add(method.getName());
+        }
         Assert.assertFalse(methodNames.contains("notModuleMethod"));
         Assert.assertTrue(methodNames.contains("noReturn"));
     }
