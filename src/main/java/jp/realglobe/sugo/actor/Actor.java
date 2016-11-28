@@ -12,6 +12,7 @@ import org.json.JSONObject;
 import io.socket.client.Ack;
 import io.socket.client.Manager;
 import io.socket.client.Socket;
+import io.socket.emitter.Emitter.Listener;
 import jp.realglobe.lib.util.StackTraces;
 import jp.realglobe.sg.socket.Constants;
 
@@ -79,15 +80,32 @@ public class Actor {
         options.secure = hubUri.getScheme().equals("https");
         this.socket = (new Manager(options)).socket(NAMESPACE);
 
-        this.socket.on(Socket.EVENT_CONNECT, args -> {
-            LOG.fine("Connected to " + this.hub);
-            greet();
+        this.socket.on(Socket.EVENT_CONNECT, new Listener() {
+            @Override
+            public void call(final Object... args) {
+                LOG.fine("Connected to " + Actor.this.hub);
+                greet();
+            }
         });
-        this.socket.on(Socket.EVENT_DISCONNECT, args -> LOG.fine("Disconnected from " + this.hub));
-        this.socket.on(Constants.RemoteEvents.PERFORM, this::perform);
-        this.socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
-            LOG.warning("Connection error: " + args[0]);
-            LOG.info(StackTraces.getString((Throwable) args[0]));
+        this.socket.on(Socket.EVENT_DISCONNECT, new Listener() {
+            @Override
+            public void call(final Object... args) {
+                LOG.fine("Disconnected from " + Actor.this.hub);
+            }
+        });
+        this.socket.on(Constants.RemoteEvents.PERFORM, new Listener() {
+
+            @Override
+            public void call(final Object... args) {
+                Actor.this.perform(args);
+            }
+        });
+        this.socket.on(Socket.EVENT_CONNECT_ERROR, new Listener() {
+            @Override
+            public void call(final Object... args) {
+                LOG.warning("Connection error: " + args[0]);
+                LOG.info(StackTraces.getString((Throwable) args[0]));
+            }
         });
 
         this.socket.connect();
@@ -104,9 +122,12 @@ public class Actor {
 
         final Map<String, Object> data = new HashMap<>();
         data.put(KEY_KEY, this.key);
-        this.socket.emit(Constants.GreetingEvents.HI, new JSONObject(data), (Ack) args -> {
-            LOG.fine(this.socket.id() + " greeted");
-            processAfterGreeting();
+        this.socket.emit(Constants.GreetingEvents.HI, new JSONObject(data), new Ack() {
+            @Override
+            public void call(final Object... args) {
+                LOG.fine(Actor.this.socket.id() + " greeted");
+                processAfterGreeting();
+            }
         });
     }
 
@@ -143,9 +164,12 @@ public class Actor {
         data.put(KEY_NAME, moduleName);
         data.put(KEY_SPEC, specification);
 
-        this.socket.emit(Constants.RemoteEvents.SPEC, new JSONObject(data), (Ack) args -> {
-            LOG.fine(this.socket.id() + " sent specification " + moduleName);
-            sendSpecification(entries);
+        this.socket.emit(Constants.RemoteEvents.SPEC, new JSONObject(data), new Ack() {
+            @Override
+            public void call(final Object... args) {
+                LOG.fine(Actor.this.socket.id() + " sent specification " + moduleName);
+                sendSpecification(entries);
+            }
         });
     }
 
@@ -218,7 +242,12 @@ public class Actor {
         } else {
             emitter = new EmitterImpl(moduleName);
         }
-        emitter.setEmitter(this::emit);
+        emitter.setEmitter(new ActorEmitter() {
+            @Override
+            public void emit(final String moduleName1, final String event, final Object data) {
+                Actor.this.emit(moduleName1, event, data);
+            }
+        });
         return emitter;
     }
 
@@ -267,7 +296,12 @@ public class Actor {
 
         final Map<String, Object> data = new HashMap<>();
         data.put(KEY_KEY, this.key);
-        socket0.emit(Constants.GreetingEvents.BYE, new JSONObject(data), (Ack) args -> socket0.disconnect());
+        socket0.emit(Constants.GreetingEvents.BYE, new JSONObject(data), new Ack() {
+            @Override
+            public void call(final Object... args) {
+                socket0.disconnect();
+            }
+        });
     }
 
 }
