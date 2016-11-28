@@ -66,7 +66,18 @@ public class Actor {
             LOG.info("Already connected");
             return;
         }
-        this.socket = (new Manager(URI.create(this.hub))).socket(NAMESPACE);
+
+        final URI hubUri = URI.create(this.hub);
+        final Manager.Options options = new Manager.Options();
+        options.hostname = hubUri.getHost();
+        options.port = hubUri.getPort();
+        options.path = hubUri.getPath();
+        if (!options.path.endsWith("/")) {
+            options.path += "/";
+        }
+        options.path += "socket.io";
+        options.secure = hubUri.getScheme().equals("https");
+        this.socket = (new Manager(options)).socket(NAMESPACE);
 
         this.socket.on(Socket.EVENT_CONNECT, args -> {
             LOG.fine("Connected to " + this.hub);
@@ -74,6 +85,11 @@ public class Actor {
         });
         this.socket.on(Socket.EVENT_DISCONNECT, args -> LOG.fine("Disconnected from " + this.hub));
         this.socket.on(Constants.RemoteEvents.PERFORM, this::perform);
+        this.socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
+            LOG.warning("Connection error: " + args[0]);
+            LOG.info(StackTraces.getString((Throwable) args[0]));
+        });
+
         this.socket.connect();
     }
 
