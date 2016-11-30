@@ -37,7 +37,6 @@ public class Actor {
     private static final String KEY_STATUS = "status";
     private static final String KEY_PAYLOAD = "payload";
 
-    private final String hub;
     private final String key;
 
     private Runnable onConnect;
@@ -48,27 +47,26 @@ public class Actor {
 
     /**
      * 作成する
-     * @param hub サーバー URL
      * @param key キー
      * @param name 名前
      * @param description 説明
      */
-    public Actor(final String hub, final String key, final String name, final String description) {
-        this.hub = hub;
+    public Actor(final String key, final String name, final String description) {
         this.key = key;
         this.modules = new HashMap<>();
     }
 
     /**
      * サーバーにつなぐ
+     * @param hub サーバー URL
      */
-    public synchronized void connect() {
+    public synchronized void connect(final String hub) {
         if (this.socket != null) {
             LOG.info("Already connected");
             return;
         }
 
-        final URI hubUri = URI.create(this.hub);
+        final URI hubUri = URI.create(hub);
         final Manager.Options options = new Manager.Options();
         options.hostname = hubUri.getHost();
         options.port = hubUri.getPort();
@@ -83,14 +81,14 @@ public class Actor {
         this.socket.on(Socket.EVENT_CONNECT, new Listener() {
             @Override
             public void call(final Object... args) {
-                LOG.fine("Connected to " + Actor.this.hub);
+                LOG.fine("Connected to " + hub);
                 greet();
             }
         });
         this.socket.on(Socket.EVENT_DISCONNECT, new Listener() {
             @Override
             public void call(final Object... args) {
-                LOG.fine("Disconnected from " + Actor.this.hub);
+                LOG.fine("Disconnected from " + hub);
             }
         });
         this.socket.on(Constants.RemoteEvents.PERFORM, new Listener() {

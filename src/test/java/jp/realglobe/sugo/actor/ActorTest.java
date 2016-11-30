@@ -58,10 +58,11 @@ public class ActorTest {
     public static void main(final String[] args) throws InterruptedException {
         final int port = Integer.parseInt(getenv("PORT", "8080"));
         final String hub = "http://localhost:" + port + "/";
+
         final String key = "actor0";
         final String name = "actor";
         final String description = "test actor";
-        final Actor actor = new Actor(hub, key, name, description);
+        final Actor actor = new Actor(key, name, description);
 
         final String moduleName = "module";
         final String moduleVersion = "2.0.0";
@@ -69,7 +70,7 @@ public class ActorTest {
         final Object module = new TestClass();
 
         actor.addModule(moduleName, moduleVersion, moduleDescription, module);
-        actor.connect();
+        actor.connect(hub);
 
         Thread.sleep(Long.MAX_VALUE);
     }
