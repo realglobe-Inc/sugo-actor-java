@@ -1,5 +1,6 @@
 package jp.realglobe.sugo.actor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -63,16 +64,31 @@ public class ActorTest {
         final String name = "actor";
         final String description = "test actor";
         final Actor actor = new Actor(key, name, description);
+        try {
+            final String moduleName = "module";
+            final String moduleVersion = "2.0.0";
+            final String moduleDescription = "test module";
+            final Object module = new TestClass();
 
-        final String moduleName = "module";
-        final String moduleVersion = "2.0.0";
-        final String moduleDescription = "test module";
-        final Object module = new TestClass();
+            final Emitter emitter = actor.addModule(moduleName, moduleVersion, moduleDescription, module);
+            actor.connect(hub);
 
-        actor.addModule(moduleName, moduleVersion, moduleDescription, module);
-        actor.connect(hub);
+            while (true) {
+                Thread.sleep(1_000L);
 
-        Thread.sleep(Long.MAX_VALUE);
+                emitter.emit("bool", true);
+                emitter.emit("number", 123.45);
+                emitter.emit("string", "abcde");
+                emitter.emit("array", new Object[] { null, false, 0, "" });
+                final Map<String, Object> object = new HashMap<>();
+                object.put("b", false);
+                object.put("c", 0);
+                object.put("d", "");
+                emitter.emit("object", object);
+            }
+        } finally {
+            actor.disconnect();
+        }
     }
 
 }
