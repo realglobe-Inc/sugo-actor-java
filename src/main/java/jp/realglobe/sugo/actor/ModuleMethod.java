@@ -2,6 +2,7 @@ package jp.realglobe.sugo.actor;
 
 import static java.lang.annotation.ElementType.METHOD;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -11,4 +12,5 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(METHOD)
+@Documented
 public @interface ModuleMethod {}
