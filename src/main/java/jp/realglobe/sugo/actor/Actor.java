@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 import org.json.JSONObject;
@@ -45,6 +47,8 @@ public class Actor {
     private Socket socket;
     private boolean greeted;
 
+    private final ExecutorService performer;
+
     /**
      * 作成する
      * @param key キー
@@ -54,6 +58,7 @@ public class Actor {
     public Actor(final String key, final String name, final String description) {
         this.key = key;
         this.modules = new HashMap<>();
+        this.performer = Executors.newCachedThreadPool();
     }
 
     /**
@@ -195,25 +200,31 @@ public class Actor {
         }
         final Object[] parameters = JsonUtils.convertToObject(data.getJSONArray(KEY_PARAMS));
 
-        final Ack ack = (Ack) args[args.length - 1];
-        JSONObject response;
-        try {
-            final Map<String, Object> responseData = new HashMap<>();
-            final Object returnValue = module.invoke(methodName, parameters);
-            responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.OK);
-            if (returnType != Void.TYPE) {
-                responseData.put(KEY_PAYLOAD, returnValue);
+        this.performer.submit(new Runnable() {
+            @Override
+            public void run() {
+
+                final Ack ack = (Ack) args[args.length - 1];
+                JSONObject response;
+                try {
+                    final Map<String, Object> responseData = new HashMap<>();
+                    final Object returnValue = module.invoke(methodName, parameters);
+                    responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.OK);
+                    if (returnType != Void.TYPE) {
+                        responseData.put(KEY_PAYLOAD, returnValue);
+                    }
+                    response = new JSONObject(responseData);
+                } catch (final Exception e) {
+                    final String warning = StackTraces.getString(e);
+                    LOG.warning(warning);
+                    final Map<String, Object> responseData = new HashMap<>();
+                    responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.NG);
+                    responseData.put(KEY_PAYLOAD, warning);
+                    response = new JSONObject(responseData);
+                }
+                ack.call(response);
             }
-            response = new JSONObject(responseData);
-        } catch (final Exception e) {
-            final String warning = StackTraces.getString(e);
-            LOG.warning(warning);
-            final Map<String, Object> responseData = new HashMap<>();
-            responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.NG);
-            responseData.put(KEY_PAYLOAD, warning);
-            response = new JSONObject(responseData);
-        }
-        ack.call(response);
+        });
     }
 
     /**
