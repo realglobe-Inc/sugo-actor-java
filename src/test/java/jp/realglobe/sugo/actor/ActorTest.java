@@ -41,16 +41,6 @@ public class ActorTest {
             return o;
         }
 
-        @ModuleMethod
-        public String echoWithDelay(final String s, final double delay) {
-            try {
-                Thread.sleep((long) (delay * 1_000));
-            } catch (final InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            return s;
-        }
-
     }
 
     private static String getenv(final String key, final String defaultValue) {
