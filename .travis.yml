@@ -10,21 +10,21 @@ cache:
     - node_modules
 before_install:
   - mkdir -p $HOME/.m2
-  - cp .travis-settings.xml $HOME/.m2/settings.xml
+  - cp example/settings-bintray.xml $HOME/.m2/settings.xml
   - nvm install ${TRAVIS_NODE_VERSION}
-  - echo "registry = ${CI_REPOSITORY}/api/npm/npm-virtual" > $HOME/.npmrc
-  - curl -u"${CI_READ_USERNAME}:${CI_READ_PASSWORD}" "${CI_REPOSITORY}/api/npm/auth" >> $HOME/.npmrc
 install:
-  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+  - mvn install -DskipTests=true -B -V
   - npm install
 script:
   - mvn test -B
   - ./ci/test.sh
 before_deploy:
-  - cp .travis-deploy-settings.xml $HOME/.m2/settings.xml
+  - curl -s https://raw.githubusercontent.com/realglobe-Inc/travis-deploy-scripts/master/maven-generate-bintray-descriptor.sh | sh
 deploy:
-  provider: script
-  script: ./.travis-deploy.sh
-  skip_cleanup: true
-  on:
-    branch: master
+  provider: bintray
+  file: bintray.json
+  user: realglobe
+  key:
+    secure: eUP2JlXyzN4Gt35lqpqa/0q2gpn7crYul7Fw+6pY+TdVT2YlJbc3iEknGOmI0PUxBHG1KrufDtAFdkZDzDH/cL2DtKWY5FPQhwJDekN1x306i/Z1sv1dZRjBI8rDbgolDqHho3bocGF/6Pke1Yk6JqsINSIvOPyzgEDcblQWI6lV69LI/KnyxbUHn9sHgxd6riLAw0JMBRwZ7FPtc/pE2+DvJkhM3M+5Xw9j4KPkZcchcmIGNmtEM1egfP9dgDbH27WD7ozjMuyYQ73ClK0jRdyVLekvpJI06olGscgprko0ZaBEowC1E7kZMiIptA5L3d1e6HD9lSIPnaf3CFjeR/Lt7w+dMoVBQLuHVY6T8+uQeoSRmnLD2Llm/OBI9cAS53LiaqHB4jw6KqXnyjIZRrM64TLo2dr7cym+B+HuHG+TMpzUed6afXITK8jljYo7UsuDcERioVAHEGe2rnqUAAx1KmqMbg5mcrkGW/6LJ0UHLnSn5Jn7rXXFliFC1JiSYnEURa1Wxyqx0XUotVHAzUvAMbmaYyo7fU81hfKZsUgb3eoqgSQW5YFb5qpU2jXYwhn8ZfGg4ZFyiEeoK/mhyaTVku1tYkVDn3OzgYrCkhniYhMI4yqjVRTNpzmmTnH/ytnfBTB69lXrRztY4DYkvaqo+5/bGwGf+IdDEfU04C8=
+after_deploy:
+  - curl -s https://raw.githubusercontent.com/realglobe-Inc/travis-deploy-scripts/master/maven-deploy-javadoc.sh | sh

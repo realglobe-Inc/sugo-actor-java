@@ -61,11 +61,33 @@
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.0.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.10.4</version>
         <configuration>
           <source>${java.version}</source>
         </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
 
@@ -109,9 +131,9 @@
 
   <distributionManagement>
     <repository>
-      <id>ci-releases</id>
-      <name>libs-release-local</name>
-      <url>${env.CI_REPOSITORY}/libs-release-local</url>
+      <id>bintray-realglobe-maven</id>
+      <name>realglobe-maven</name>
+      <url>https://api.bintray.com/maven/realglobe/maven/${project.artifactId}/;publish=1</url>
     </repository>
   </distributionManagement>
 
