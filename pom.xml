@@ -65,6 +65,12 @@
       <groupId>io.socket</groupId>
       <artifactId>socket.io-client</artifactId>
       <version>0.8.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.json</groupId>
+          <artifactId>json</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
