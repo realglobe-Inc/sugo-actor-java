@@ -1,8 +1,8 @@
 {
   "devDependencies": {
     "co": "^4.6.0",
-    "sugo-actor": "^4.4.6",
-    "sugo-caller": "^3.0.5",
-    "sugo-hub": "^4.0.14"
+    "sugo-actor": "^4.6.4",
+    "sugo-caller": "^3.2.6",
+    "sugo-hub": "^5.3.2"
   }
 }
