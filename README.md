@@ -2,7 +2,7 @@
 
 Java 用の sugo actor。
 
-https://realglobe-inc.github.io/javadoc/jp/realglobe/sugo-actor-java/
+https://realglobe-inc.github.io/javadoc/jp/realglobe/sugo-actor/
 
 
 ## コンパイル
