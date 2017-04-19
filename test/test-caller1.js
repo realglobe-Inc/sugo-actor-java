@@ -27,19 +27,19 @@ co(function * () {
 
     const nTask = 100
     const start = Date.now()
-    const tasks = []
+    const results = []
     const answers = []
     for (let i = 0; i < nTask; i++) {
       const answer = i + 'abcde'
-      tasks[i] = module.echoWithDelay(answer, 1)
+      results[i] = module.echoWithDelay(answer, 1)
       answers[i] = answer
     }
-    assert.deepEqual(yield Promise.all(tasks), answers)
+    assert.deepEqual(yield Promise.all(results), answers)
     const end = Date.now()
     if (end - start >= nTask * 1000) {
       assert.fail(undefined, undefined, 'Took too long time: ' + ((end - start) / 1000) + ' seconds', undefined)
     }
-    console.log('Took ' + (end - start) / 1000 + ' seconds')
+    console.log('Took: ' + (end - start) / 1000 + ' seconds')
 
     let b
     let n
@@ -61,6 +61,7 @@ co(function * () {
     assert.deepEqual(a, [null, false, 0, ''])
     assert.deepEqual(o, {b: false, c: 0, d: ''})
   } finally {
+    console.log('!!!disconnect!')
     caller.disconnect()
   }
 }).catch((err) => {

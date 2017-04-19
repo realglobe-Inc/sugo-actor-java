@@ -4,7 +4,7 @@
 
   <groupId>jp.realglobe</groupId>
   <artifactId>sugo-actor</artifactId>
-  <version>3.0.2</version>
+  <version>4.0.0</version>
   <packaging>jar</packaging>
   <name>sugo actor</name>
 
@@ -29,7 +29,7 @@
     <dependency>
       <groupId>jp.realglobe</groupId>
       <artifactId>sg-socket-constants</artifactId>
-      <version>1.3.11</version>
+      <version>1.5.0</version>
     </dependency>
 
     <dependency>

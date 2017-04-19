@@ -21,7 +21,11 @@ port=${PORT:=12345}
   pid_actor=$!
   trap "kill ${pid_hub} ${pid_actor}" EXIT 2
 
+  echo "####### Start test/wait-actor.js #####"
+
   ${nodejs} test/wait-actor.js
+
+  echo "####### Start test/test-caller1.js #####"
 
   ${nodejs} test/test-caller1.js
 )

@@ -14,7 +14,7 @@ co(function * () {
     port: hub.port,
     key: 'actor0',
     modules: {
-      module: new Module({
+      myModule: new Module({
         method (arg) {
           return co(function * () {
             return 'arg is ' + arg
