@@ -21,3 +21,6 @@ target/
 
 node_modules
 var
+
+
+.idea

@@ -91,7 +91,7 @@ public class ActorTest {
         final String description = "test actor";
         final Actor actor = new Actor(key, name, description);
         try {
-            final String moduleName = "module";
+            final String moduleName = "myModule";
             final String moduleVersion = "2.0.0";
             final String moduleDescription = "test module";
             final Object module = new TestClass();

@@ -14,7 +14,7 @@ co(function * () {
   const caller = sugoCaller(HUB + '/callers')
   try {
     const actor = yield caller.connect(ACTOR)
-    const module = actor.get('module')
+    const module = actor.get('myModule')
 
     assert.equal(yield module.echoBool(true), true)
     assert.equal(yield module.echoNumber(12345), 12345)
@@ -27,19 +27,19 @@ co(function * () {
 
     const nTask = 100
     const start = Date.now()
-    const tasks = []
+    const results = []
     const answers = []
     for (let i = 0; i < nTask; i++) {
       const answer = i + 'abcde'
-      tasks[i] = module.echoWithDelay(answer, 1)
+      results[i] = module.echoWithDelay(answer, 1)
       answers[i] = answer
     }
-    assert.deepEqual(yield Promise.all(tasks), answers)
+    assert.deepEqual(yield Promise.all(results), answers)
     const end = Date.now()
     if (end - start >= nTask * 1000) {
       assert.fail(undefined, undefined, 'Took too long time: ' + ((end - start) / 1000) + ' seconds', undefined)
     }
-    console.log('Took ' + (end - start) / 1000 + ' seconds')
+    console.log('Took: ' + (end - start) / 1000 + ' seconds')
 
     let b
     let n

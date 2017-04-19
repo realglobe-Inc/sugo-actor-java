@@ -45,6 +45,7 @@ public class Actor {
 
     // sugos 送信データのキー
     private static final String KEY_KEY = "key";
+    private static final String PID_KEY = "pid";
     private static final String KEY_NAME = "name";
     private static final String KEY_SPEC = "spec";
     private static final String KEY_MODULE = "module";
@@ -67,8 +68,9 @@ public class Actor {
 
     /**
      * 作成する
-     * @param key キー
-     * @param name 名前
+     *
+     * @param key         キー
+     * @param name        名前
      * @param description 説明
      */
     public Actor(final String key, final String name, final String description) {
@@ -79,6 +81,7 @@ public class Actor {
 
     /**
      * サーバーにつなぐ
+     *
      * @param hub サーバー URL
      */
     public synchronized void connect(final String hub) {
@@ -159,6 +162,7 @@ public class Actor {
 
     /**
      * サーバーに仕様を通知
+     *
      * @param entries 通知するモジュール
      */
     private synchronized void sendSpecification(final List<Map.Entry<String, Module>> entries) {
@@ -194,6 +198,7 @@ public class Actor {
 
     /**
      * モジュール関数を実行
+     *
      * @param args io.socket.client.Ack.call を参照
      */
     private void perform(final Object[] args) {
@@ -215,36 +220,40 @@ public class Actor {
             throw new RuntimeException("function " + methodName + " does not exist");
         }
         final Object[] parameters = JsonUtils.convertToObject(data.getJSONArray(KEY_PARAMS));
+        final String key = data.getString(KEY_KEY);
+        final Socket socket = this.socket;
+
 
         this.performer.submit(new Runnable() {
             @Override
             public void run() {
-
-                final Ack ack = (Ack) args[args.length - 1];
-                JSONObject response;
+                final String pid = data.getString(PID_KEY);
+                Map<String, Object> responseData;
                 try {
-                    final Map<String, Object> responseData = new HashMap<>();
+                    responseData = new HashMap<>();
                     final Object returnValue = module.invoke(methodName, parameters);
                     responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.OK);
                     if (returnType != Void.TYPE) {
                         responseData.put(KEY_PAYLOAD, returnValue);
                     }
-                    response = new JSONObject(responseData);
                 } catch (final Exception e) {
                     final String warning = StackTraces.getString(e);
                     LOG.warning(warning);
-                    final Map<String, Object> responseData = new HashMap<>();
+                    responseData = new HashMap<>();
                     responseData.put(KEY_STATUS, Constants.AcknowledgeStatus.NG);
                     responseData.put(KEY_PAYLOAD, warning);
-                    response = new JSONObject(responseData);
                 }
-                ack.call(response);
+                responseData.put(PID_KEY, pid);
+                responseData.put(KEY_KEY, key);
+                JSONObject response = new JSONObject(responseData);
+                socket.emit(Constants.RemoteEvents.RESULT, response);
             }
         });
     }
 
     /**
      * つながったときに実行する関数を登録する
+     *
      * @param onConnect つながったときに実行する関数
      */
     public synchronized void setOnConnect(final Runnable onConnect) {
@@ -253,10 +262,11 @@ public class Actor {
 
     /**
      * モジュールを登録する
-     * @param moduleName モジュール名
-     * @param moduleVersion モジュールバージョン
+     *
+     * @param moduleName        モジュール名
+     * @param moduleVersion     モジュールバージョン
      * @param moduleDescription モジュールの説明
-     * @param module モジュール
+     * @param module            モジュール
      * @return モジュール用のイベント送信機
      */
     public synchronized Emitter addModule(final String moduleName, final String moduleVersion, final String moduleDescription, final Object module) {
@@ -288,8 +298,9 @@ public class Actor {
 
     /**
      * イベント送信
+     *
      * @param event イベント
-     * @param data JSON 化可能なデータ
+     * @param data  JSON 化可能なデータ
      */
     synchronized void emit(final String moduleName, final String event, final Object data) {
         final Map<String, Object> wrapData = new HashMap<>();
