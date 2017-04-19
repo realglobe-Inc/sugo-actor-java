@@ -16,6 +16,7 @@ install:
   - mvn install -DskipTests=true -B -V
   - npm install
 script:
+  - mvn clean
   - mvn test -B
   - ./ci/test.sh
 before_deploy:

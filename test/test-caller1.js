@@ -14,7 +14,7 @@ co(function * () {
   const caller = sugoCaller(HUB + '/callers')
   try {
     const actor = yield caller.connect(ACTOR)
-    const module = actor.get('module')
+    const module = actor.get('myModule')
 
     assert.equal(yield module.echoBool(true), true)
     assert.equal(yield module.echoNumber(12345), 12345)
@@ -61,7 +61,6 @@ co(function * () {
     assert.deepEqual(a, [null, false, 0, ''])
     assert.deepEqual(o, {b: false, c: 0, d: ''})
   } finally {
-    console.log('!!!disconnect!')
     caller.disconnect()
   }
 }).catch((err) => {
